@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>One-time 2FA code — Wantrelaxx</title>
+    <title>🛎️Одноразовые коды 2Фа — Wantrelaxx</title>
     <style>
         body {
             font-family: system-ui, sans-serif;
@@ -149,12 +149,12 @@
 </head>
 <body>
     <div class="container">
-        <h1>One-time 2FA code</h1>
+        <h1>🛎️Одноразовые коды 2Фа</h1>
         <div id="label">Wantrelaxx - fanpay</div>
         <div id="code">------</div>
         <div class="progress"><div id="bar" class="bar" style="width:100%"></div></div>
-        <div id="countdown">Update in <span id="time">30</span>s</div>
-        <button id="copy-btn">Copy</button>
+        <div id="countdown">Обновится через <span id="time">30</span>s</div>
+        <button id="copy-btn">Скопировать</button>
         <div id="error" class="error"></div>
         <div id="success" class="success"></div>
     </div>
@@ -168,15 +168,15 @@
         document.getElementById('copy-btn').addEventListener('click', async () => {
             const text = document.getElementById('code').textContent;
             if (text === '------') {
-                showError('Code not ready yet!');
+                showError('Код пока что не готов');
                 return;
             }
             try {
                 await navigator.clipboard.writeText(text);
-                showSuccess('Code copied!');
+                showSuccess('Код скопирован!');
                 document.getElementById('copy-btn').textContent = 'Copied!';
                 setTimeout(() => {
-                    document.getElementById('copy-btn').textContent = 'Copy';
+                    document.getElementById('скопировать').textContent = 'Copy';
                 }, 2000);
             } catch (err) {
                 console.log(err);
