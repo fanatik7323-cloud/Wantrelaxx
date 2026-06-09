@@ -244,20 +244,27 @@
         .settings h3 {
             font-size: 14px;
             color: #333;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
         .setting-item {
-            margin-bottom: 15px;
+            margin-bottom: 0;
         }
 
         .setting-item label {
             display: block;
-            font-size: 13px;
+            font-size: 12px;
             color: #555;
             margin-bottom: 8px;
+            font-weight: 600;
         }
 
         .setting-item input {
@@ -265,8 +272,13 @@
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 12px;
             color: #333;
+            font-family: 'Courier New', monospace;
+        }
+
+        .setting-item input::placeholder {
+            color: #bbb;
         }
 
         .empty-state {
@@ -304,6 +316,10 @@
             .btn-copy-main {
                 font-size: 16px;
                 padding: 15px;
+            }
+
+            .settings-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -365,18 +381,32 @@
         </div>
 
         <div class="settings">
-            <h3>⚙️ Настройки</h3>
-            <div class="setting-item">
-                <label for="secretInput">Secret Key (Base32):</label>
-                <input type="text" id="secretInput" placeholder="Вставьте secret key от 2FA" value="JBSWY3DPEBLW64TMMQ======">
-            </div>
-            <div class="setting-item">
-                <label for="issuerInput">Издатель:</label>
-                <input type="text" id="issuerInput" placeholder="Например: Google, GitHub и т.д." value="Example Service">
-            </div>
-            <div class="setting-item">
-                <label for="accountInput">Аккаунт:</label>
-                <input type="text" id="accountInput" placeholder="Например: user@example.com" value="user@example.com">
+            <h3>⚙️ Secret Keys для каждого кода</h3>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label for="secret1">Код 1 - Secret Key:</label>
+                    <input type="text" id="secret1" placeholder="Base32 ключ" value="JBSWY3DPEBLW64TMMQ======">
+                </div>
+                <div class="setting-item">
+                    <label for="secret2">Код 2 - Secret Key:</label>
+                    <input type="text" id="secret2" placeholder="Base32 ключ" value="">
+                </div>
+                <div class="setting-item">
+                    <label for="secret3">Код 3 - Secret Key:</label>
+                    <input type="text" id="secret3" placeholder="Base32 ключ" value="">
+                </div>
+                <div class="setting-item">
+                    <label for="secret4">Код 4 - Secret Key:</label>
+                    <input type="text" id="secret4" placeholder="Base32 ключ" value="">
+                </div>
+                <div class="setting-item">
+                    <label for="secret5">Код 5 - Secret Key:</label>
+                    <input type="text" id="secret5" placeholder="Base32 ключ" value="">
+                </div>
+                <div class="setting-item">
+                    <label for="secret6">Код 6 - Secret Key:</label>
+                    <input type="text" id="secret6" placeholder="Base32 ключ" value="">
+                </div>
             </div>
         </div>
     </div>
@@ -386,6 +416,7 @@
         let codes = [];
         let selectedCodeId = null;
         const MAX_CODES = 6;
+        const secretInputIds = ['secret1', 'secret2', 'secret3', 'secret4', 'secret5', 'secret6'];
 
         class TOTP {
             constructor(secret) {
@@ -461,10 +492,18 @@
             }
 
             const id = Date.now();
+            const secretKey = document.getElementById(secretInputIds[codes.length]).value;
+
+            if (!secretKey.trim()) {
+                alert(`Пожалуйста, введите Secret Key для Кода ${codes.length + 1}`);
+                return;
+            }
+
             const newCode = {
                 id,
+                index: codes.length,
                 label: `Код ${codes.length + 1}`,
-                secret: document.getElementById('secretInput').value
+                secret: secretKey
             };
             codes.push(newCode);
 
@@ -496,7 +535,7 @@
         function updateLabel(id, label) {
             const code = codes.find(c => c.id === id);
             if (code) {
-                code.label = label || `Код ${codes.indexOf(code) + 1}`;
+                code.label = label || `Код ${code.index + 1}`;
             }
         }
 
@@ -514,7 +553,7 @@
             empty.style.display = 'none';
             document.getElementById('copySection').style.display = 'block';
 
-            grid.innerHTML = codes.map((code, index) => {
+            grid.innerHTML = codes.map((code) => {
                 const totp = new TOTP(code.secret);
                 const otpCode = totp.getCode();
                 const progress = totp.getProgress();
@@ -607,7 +646,6 @@
         }
 
         // Инициализация
-        addCodeCard();
         updateCodes();
     </script>
 </body>
