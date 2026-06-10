@@ -222,118 +222,241 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha1/0.6.0/sha1.min.js"></script>
     <script>
         const ACCOUNTS = 6;
         
-        // ===== ЗДЕСЬ ВСТАВЛЯЙТЕ СВОИ BASE32 КЛЮЧИ =====
+        // ===== ВСТАВЬТЕ ВАШИ BASE32 КЛЮЧИ (32 символа) =====
         const SECRETS = {
-            1: 'KQRGMZCH6VYKNZ32AAN5THGVJMYHNHJG', // Аккаунт 1 - вставьте Base32 ключ сюда
-            2: 'II4YSYGSUPCDL7XEOVOHJ5YPSBRVWE3O', // Аккаунт 2
-            3: '2V6TPAWMFKPHWIH2PC526QISZREYWSI3', // Аккаунт 3
-            4: 'MSL7OSW725NG3GGWBMZEM3MJSWAMOFKN', // Аккаунт 4
-            5: 'S6BQ5ZVKACKW3GWOKX43U4W6VFD3BYWA', // Аккаунт 5
-            6: 'BP63KNOVTHF7Q3FUAPESXW6CIGKBLO5U'  // Аккаунт 6
+            1: 'KQRGMZCH6VYKNZ32AAN5THGVJMYHNHJG',
+            2: 'II4YSYGSUPCDL7XEOVOHJ5YPSBRVWE3O',
+            3: '2V6TPAWMFKPHWIH2PC526QISZREYWSI3',
+            4: 'MSL7OSW725NG3GGWBMZEM3MJSWAMOFKN',
+            5: 'S6BQ5ZVKACKW3GWOKX43U4W6VFD3BYWA',
+            6: 'BP63KNOVTHF7Q3FUAPESXW6CIGKBLO5U'
         };
-        // ============================================
 
-        // TOTP функция - генерирует 6-значный код
-        function generateTOTP(secret, time = null) {
-            if (!secret) return '------';
-            
-            time = time || Math.floor(Date.now() / 1000);
-            const epoch = Math.floor(time / 30);
-            
-            // Конвертируем base32 secret в байты
-            const key = base32ToBytes(secret);
-            
-            // Создаем HMAC-SHA1
-            const msg = new ArrayBuffer(8);
-            const view = new Uint8Array(msg);
-            for (let i = 7; i >= 0; i--) {
-                view[i] = epoch & 0xff;
-                epoch >>= 8;
+        // ===== SHA1 встроенная функция (не требует CDN) =====
+        function sha1(str) {
+            function rotate_left(n, b) {
+                return ((n << b) | (n >> (32 - b)));
             }
-            
-            const hmac = generateHMAC(key, view);
-            
-            // Динамическое усечение
-            const offset = hmac[hmac.length - 1] & 0xf;
-            const code = ((hmac[offset] & 0x7f) << 24)
-                | ((hmac[offset + 1] & 0xff) << 16)
-                | ((hmac[offset + 2] & 0xff) << 8)
-                | (hmac[offset + 3] & 0xff);
-            
-            return (code % 1000000).toString().padStart(6, '0');
+
+            function cvt_hex(val) {
+                var str = "";
+                var i;
+                var v;
+
+                for (i = 7; i >= 0; i--) {
+                    v = (val >>> (i * 4)) & 0x0f;
+                    str += v.toString(16);
+                }
+                return str;
+            }
+
+            var blockstart;
+            var i, j;
+            var W = new Array(80);
+            var H0 = 0x67452301;
+            var H1 = 0xEFCDAB89;
+            var H2 = 0x98BADCFE;
+            var H3 = 0x10325476;
+            var H4 = 0xC3D2E1F0;
+            var A, B, C, D, E, temp;
+
+            str = unescape(encodeURIComponent(str));
+            var strLen = str.length;
+
+            var wordArray = [];
+            for (i = 0; i < strLen - 3; i += 4) {
+                j = str.charCodeAt(i) << 24 | str.charCodeAt(i + 1) << 16 |
+                    str.charCodeAt(i + 2) << 8 | str.charCodeAt(i + 3);
+                wordArray.push(j);
+            }
+
+            switch (strLen % 4) {
+                case 0:
+                    i = 0x080000000;
+                    break;
+                case 1:
+                    i = str.charCodeAt(strLen - 1) << 24 | 0x0800000;
+                    break;
+                case 2:
+                    i = str.charCodeAt(strLen - 2) << 24 | str.charCodeAt(strLen - 1) << 16 | 0x08000;
+                    break;
+                case 3:
+                    i = str.charCodeAt(strLen - 3) << 24 | str.charCodeAt(strLen - 2) << 16 | str.charCodeAt(strLen - 1) << 8 | 0x80;
+                    break;
+            }
+
+            wordArray.push(i);
+
+            while ((wordArray.length % 16) != 0) {
+                wordArray.push(0);
+            }
+
+            wordArray.push(strLen >>> 29);
+            wordArray.push((strLen << 3) & 0x0ffffffff);
+
+            for (blockstart = 0; blockstart < wordArray.length; blockstart += 16) {
+                for (i = 0; i < 16; i++) {
+                    W[i] = wordArray[blockstart + i];
+                }
+                for (i = 16; i <= 79; i++) {
+                    W[i] = rotate_left(W[i - 3] ^ W[i - 8] ^ W[i - 14] ^ W[i - 16], 1);
+                }
+
+                A = H0;
+                B = H1;
+                C = H2;
+                D = H3;
+                E = H4;
+
+                for (i = 0; i <= 19; i++) {
+                    temp = (rotate_left(A, 5) + ((B & C) | (~B & D)) + E + W[i] + 0x5A827999) & 0x0ffffffff;
+                    E = D;
+                    D = C;
+                    C = rotate_left(B, 30);
+                    B = A;
+                    A = temp;
+                }
+
+                for (i = 20; i <= 39; i++) {
+                    temp = (rotate_left(A, 5) + (B ^ C ^ D) + E + W[i] + 0x6ED9EBA1) & 0x0ffffffff;
+                    E = D;
+                    D = C;
+                    C = rotate_left(B, 30);
+                    B = A;
+                    A = temp;
+                }
+
+                for (i = 40; i <= 59; i++) {
+                    temp = (rotate_left(A, 5) + ((B & C) | (B & D) | (C & D)) + E + W[i] + 0x8F1BBCDC) & 0x0ffffffff;
+                    E = D;
+                    D = C;
+                    C = rotate_left(B, 30);
+                    B = A;
+                    A = temp;
+                }
+
+                for (i = 60; i <= 79; i++) {
+                    temp = (rotate_left(A, 5) + (B ^ C ^ D) + E + W[i] + 0xCA62C1D6) & 0x0ffffffff;
+                    E = D;
+                    D = C;
+                    C = rotate_left(B, 30);
+                    B = A;
+                    A = temp;
+                }
+
+                H0 = (H0 + A) & 0x0ffffffff;
+                H1 = (H1 + B) & 0x0ffffffff;
+                H2 = (H2 + C) & 0x0ffffffff;
+                H3 = (H3 + D) & 0x0ffffffff;
+                H4 = (H4 + E) & 0x0ffffffff;
+            }
+
+            var tempstr = cvt_hex(H0) + cvt_hex(H1) + cvt_hex(H2) + cvt_hex(H3) + cvt_hex(H4);
+
+            return tempstr.toLowerCase();
         }
 
-        // Конвертируем base32 в байты
-        function base32ToBytes(base32String) {
+        // Base32 декодирование
+        function base32Decode(base32String) {
             const base32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-            const bits = base32String
-                .toUpperCase()
-                .split('')
-                .map(char => base32Alphabet.indexOf(char).toString(2).padStart(5, '0'))
-                .join('')
-                .padEnd(Math.ceil(base32String.length * 5 / 8) * 8, '0');
+            let bits = '';
             
+            for (let i = 0; i < base32String.length; i++) {
+                const val = base32Alphabet.indexOf(base32String[i].toUpperCase());
+                if (val === -1) throw new Error('Invalid Base32 character: ' + base32String[i]);
+                bits += val.toString(2).padStart(5, '0');
+            }
+
             const bytes = [];
-            for (let i = 0; i < bits.length; i += 8) {
-                bytes.push(parseInt(bits.substr(i, 8), 2));
+            for (let i = 0; i + 8 <= bits.length; i += 8) {
+                bytes.push(parseInt(bits.substring(i, i + 8), 2));
+            }
+            return bytes;
+        }
+
+        // Преобразование строки в байты
+        function stringToBytes(str) {
+            const bytes = [];
+            for (let i = 0; i < str.length; i++) {
+                bytes.push(str.charCodeAt(i) & 0xff);
             }
             return bytes;
         }
 
         // HMAC-SHA1
-        function generateHMAC(key, message) {
+        function hmacSha1(key, message) {
             const blockSize = 64;
-            
-            if (key.length > blockSize) {
-                key = sha1Bytes(key);
-            }
-            
-            const paddedKey = new Array(blockSize);
-            for (let i = 0; i < blockSize; i++) {
-                paddedKey[i] = key[i] || 0;
-            }
-            
-            const opad = new Array(blockSize);
-            const ipad = new Array(blockSize);
-            
-            for (let i = 0; i < blockSize; i++) {
-                opad[i] = paddedKey[i] ^ 0x5c;
-                ipad[i] = paddedKey[i] ^ 0x36;
-            }
-            
-            const innerMessage = new Uint8Array([...ipad, ...message]);
-            const innerHash = sha1Bytes(innerMessage);
-            
-            const outerMessage = new Uint8Array([...opad, ...innerHash]);
-            return sha1Bytes(outerMessage);
-        }
+            let keyBytes = key;
 
-        // SHA1
-        function sha1Bytes(data) {
-            const hash = sha1(data);
-            const result = [];
-            for (let i = 0; i < hash.length; i += 2) {
-                result.push(parseInt(hash.substr(i, 2), 16));
+            if (keyBytes.length > blockSize) {
+                keyBytes = stringToBytes(sha1(String.fromCharCode.apply(null, keyBytes)));
             }
+
+            const paddedKey = new Array(blockSize).fill(0);
+            for (let i = 0; i < keyBytes.length; i++) {
+                paddedKey[i] = keyBytes[i];
+            }
+
+            const opad = paddedKey.map(b => b ^ 0x5c);
+            const ipad = paddedKey.map(b => b ^ 0x36);
+
+            const ipadMsg = String.fromCharCode.apply(null, ipad) + String.fromCharCode.apply(null, message);
+            const innerHash = sha1(ipadMsg);
+
+            const opadMsg = String.fromCharCode.apply(null, opad) + innerHash;
+            const result = sha1(opadMsg);
             return result;
         }
 
-        // Инициализируем сетку кодов
+        // TOTP генератор
+        function generateTOTP(secret, time = null) {
+            if (!secret) return '------';
+
+            try {
+                time = time || Math.floor(Date.now() / 1000);
+                const timeCounter = Math.floor(time / 30);
+
+                const key = base32Decode(secret);
+                
+                // Создаем 8-байтовое сообщение с counter
+                const msg = new Uint8Array(8);
+                let counter = timeCounter;
+                msg[0] = (counter >>> 56) & 0xff;
+                msg[1] = (counter >>> 48) & 0xff;
+                msg[2] = (counter >>> 40) & 0xff;
+                msg[3] = (counter >>> 32) & 0xff;
+                msg[4] = (counter >>> 24) & 0xff;
+                msg[5] = (counter >>> 16) & 0xff;
+                msg[6] = (counter >>> 8) & 0xff;
+                msg[7] = counter & 0xff;
+
+                const hmacHex = hmacSha1(key, msg);
+                const hmacBytes = stringToBytes(hmacHex);
+
+                const offset = hmacBytes[hmacBytes.length - 1] & 0x0f;
+                const code = ((hmacBytes[offset] & 0x7f) << 24)
+                    | ((hmacBytes[offset + 1] & 0xff) << 16)
+                    | ((hmacBytes[offset + 2] & 0xff) << 8)
+                    | (hmacBytes[offset + 3] & 0xff);
+
+                return (code % 1000000).toString().padStart(6, '0');
+            } catch (e) {
+                console.error('TOTP error:', e);
+                return 'Ошибка';
+            }
+        }
+
+        // Инициализация сетки
         function initializeGrid() {
             const grid = document.getElementById('codesGrid');
             grid.innerHTML = '';
-            
+
             for (let i = 1; i <= ACCOUNTS; i++) {
                 const card = document.createElement('div');
-                if (i > 4) {
-                    card.className = 'code-card bottom-card';
-                } else {
-                    card.className = 'code-card';
-                }
+                card.className = i > 4 ? 'code-card bottom-card' : 'code-card';
                 card.id = `card-${i}`;
                 card.innerHTML = `
                     <div class="account-label">Аккаунт ${i}</div>
@@ -341,40 +464,35 @@
                     <div class="progress-bar">
                         <div class="progress-fill" id="progress-${i}" style="width: 100%"></div>
                     </div>
-                    <div class="countdown" id="countdown-${i}">Обновление через 30с</div>
+                    <div class="countdown" id="countdown-${i}">Загрузка...</div>
                     <div class="button-container">
                         <button class="btn-copy" id="copy-${i}" data-account="${i}">📋 Копировать</button>
                     </div>
                 `;
                 grid.appendChild(card);
-            }
 
-            // Добавляем обработчики для кнопок копирования
-            for (let i = 1; i <= ACCOUNTS; i++) {
                 document.getElementById(`copy-${i}`).addEventListener('click', () => copyCode(i));
             }
         }
 
-        // Обновляем все коды
+        // Обновление кодов
         function updateCodes() {
             const now = Math.floor(Date.now() / 1000);
             const timeInPeriod = now % 30;
             const progress = ((30 - timeInPeriod) / 30) * 100;
-            
+
             for (let i = 1; i <= ACCOUNTS; i++) {
-                const secret = SECRETS[i];
-                const code = generateTOTP(secret, now);
-                
+                const code = generateTOTP(SECRETS[i], now);
                 document.getElementById(`code-${i}`).textContent = code;
                 document.getElementById(`progress-${i}`).style.width = progress + '%';
                 document.getElementById(`countdown-${i}`).textContent = `Обновление через ${30 - timeInPeriod}с`;
             }
         }
 
-        // Копируем отдельный код
+        // Копирование кода
         function copyCode(accountNumber) {
             const code = document.getElementById(`code-${accountNumber}`).textContent;
-            if (code === '------') return;
+            if (code === '------' || code === 'Ошибка') return;
 
             navigator.clipboard.writeText(code).then(() => {
                 const btn = document.getElementById(`copy-${accountNumber}`);
@@ -386,7 +504,7 @@
             });
         }
 
-        // Переносим карточки 5 и 6 в отдельный контейнер
+        // Переорганизация карточек
         function reorganizeCards() {
             const grid = document.getElementById('codesGrid');
             const card5 = document.getElementById('card-5');
@@ -395,7 +513,6 @@
             if (card5 && card6) {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'bottom-cards-wrapper';
-                
                 grid.appendChild(wrapper);
                 wrapper.appendChild(card5);
                 wrapper.appendChild(card6);
@@ -404,16 +521,20 @@
 
         // Инициализация
         function init() {
+            console.log('Initializing 2FA...');
             initializeGrid();
             reorganizeCards();
             updateCodes();
-
-            // Обновляем коды каждую секунду
+            console.log('2FA ready');
             setInterval(updateCodes, 1000);
         }
 
-        // Запускаем при загрузке страницы
-        document.addEventListener('DOMContentLoaded', init);
+        // Запуск после загрузки DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
 </body>
 </html>
